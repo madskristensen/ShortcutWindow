@@ -1,5 +1,6 @@
-﻿using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -14,6 +15,9 @@ namespace ShortcutWindow
         private readonly CommandBridge _service;
         private CommandEvents _events;
         private readonly Key[] _keys = [Key.LeftCtrl, Key.RightCtrl, Key.LeftAlt, Key.RightAlt, Key.LeftShift, Key.RightShift];
+        private Command _lastCommand;
+        private DateTime _lastCommandTime;
+        private readonly Timer _timer;
 
         public ShortcutToolWindow(DTE2 dte, General settings, CommandBridge service)
         {
@@ -23,6 +27,25 @@ namespace ShortcutWindow
 
             InitializeComponent();
             SetFontSize(settings);
+
+            _timer = new Timer(5 * 1000);
+            _timer.Elapsed += OnTimerElapsed;
+        }
+
+        private void OnTimerElapsed(object sender, ElapsedEventArgs e)
+        {
+            if (_lastCommandTime.AddSeconds(5) < DateTime.Now)
+            {
+                _lastCommand = null;
+                _timer.Stop();
+
+                ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    lblShortcut.Content = "Ready";
+                    lblCommand.Content = "Awaiting shortcut...";
+                }).FireAndForget();
+            }
         }
 
         protected override void OnMouseEnter(MouseEventArgs e) => btnPlayPause.Visibility = Visibility.Visible;
@@ -50,17 +73,28 @@ namespace ShortcutWindow
 
         private void OnBeforeCommandExecuted(string Guid, int ID, object CustomIn, object CustomOut, ref bool CancelDefault)
         {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
             if (!_keys.Any(Keyboard.IsKeyDown))
             {
                 return;
             }
+
+            Command cmd = _dte.Commands.Item(Guid, ID);
+
+            if (cmd == _lastCommand)
+            {
+                _lastCommandTime = DateTime.Now;
+                return;
+            }
+
+            _lastCommand = cmd;
 
             Debouncer.Debounce(Guid + ID, () =>
             {
                 ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    Command cmd = _dte.Commands.Item(Guid, ID);
                     var shortcut = Commands.GetShortcut(cmd);
 
                     if (!string.IsNullOrEmpty(shortcut) && !string.IsNullOrEmpty(cmd.Name))
@@ -72,6 +106,10 @@ namespace ShortcutWindow
                             Content = cmd.LocalizedName
                         };
                     }
+
+                    _lastCommandTime = DateTime.Now;
+                    _timer.Start();
+
                 }).FireAndForget();
             }, 300);
         }
@@ -88,6 +126,7 @@ namespace ShortcutWindow
                 btnPlayPause.Content = "▶️";
                 btnPlayPause.Visibility = Visibility.Visible;
                 _events.BeforeExecute -= OnBeforeCommandExecuted;
+                _timer.Stop();
             }
             else
             {
