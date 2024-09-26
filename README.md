@@ -12,3 +12,10 @@ or get the [CI build][vsixgallery]
 ----------------------------------------
 
 Shows what keyboard shortcuts are being used in the corner of the screen. Great for presentations and demos.
+
+![Shortcut presenter window](art/window.png)
+
+
+You can change the font size in the options dialog.
+
+![Options dialog](art/options.png)

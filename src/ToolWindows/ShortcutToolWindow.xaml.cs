@@ -13,10 +13,19 @@ namespace ShortcutWindow
         private readonly Key[] _keys = [Key.LeftCtrl, Key.RightCtrl, Key.LeftAlt, Key.RightAlt, Key.LeftShift, Key.RightShift];
         private bool _showShortcut;
 
-        public ShortcutToolWindow(DTE2 dte)
+        public ShortcutToolWindow(DTE2 dte, General settings)
         {
             _dte = dte;
+
+            General.Saved += OnGeneralSettingsSaved;
+
             InitializeComponent();
+            SetFontSize(settings);
+        }
+
+        private void OnGeneralSettingsSaved(General settings)
+        {
+            SetFontSize(settings);
         }
 
         protected override void OnInitialized(EventArgs e)
@@ -27,6 +36,12 @@ namespace ShortcutWindow
             _events = _dte.Events.CommandEvents;
             _events.BeforeExecute += OnBeforeCommandExecuted;
             _events.AfterExecute += OnAfterCommandExecuted;
+        }
+
+        private void SetFontSize(General settings)
+        {
+            lblShortcut.FontSize = settings.FontSizeShortcut;
+            lblCommand.FontSize = settings.FontSizeCommand;
         }
 
         private void OnAfterCommandExecuted(string Guid, int ID, object CustomIn, object CustomOut)
@@ -42,6 +57,10 @@ namespace ShortcutWindow
 
             lblShortcut.Content = shortcut;
             lblCommand.Content = Commands.Prettify(cmd);
+            lblCommand.ToolTip = new ToolTip()
+            {
+                Content = cmd.LocalizedName
+            };
         }
 
         private void OnBeforeCommandExecuted(string Guid, int ID, object CustomIn, object CustomOut, ref bool CancelDefault)

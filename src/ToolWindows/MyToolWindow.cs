@@ -20,7 +20,9 @@ namespace ShortcutWindow
         public override async Task<FrameworkElement> CreateAsync(int toolWindowId, CancellationToken cancellationToken)
         {
             DTE2 dte = await VS.GetRequiredServiceAsync<DTE, DTE2>();
-            return new ShortcutToolWindow(dte);
+            General settings = await General.GetLiveInstanceAsync();
+
+            return new ShortcutToolWindow(dte, settings);
         }
 
         [Guid("0b20f013-c12d-40e1-9be7-4141a5b9942b")]

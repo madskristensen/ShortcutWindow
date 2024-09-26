@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Text.RegularExpressions;
 using EnvDTE;
 
 namespace ShortcutWindow
@@ -42,7 +43,9 @@ namespace ShortcutWindow
             }
 
             var index = cmd.LocalizedName.LastIndexOf('.') + 1;
-            return cmd.LocalizedName.Substring(index);
+            var name = cmd.LocalizedName.Substring(index);
+
+            return Regex.Replace(name, "[a-z][A-Z]", m => $"{m.Value[0]} {m.Value[1]}");
         }
 
         private static bool IsShortcutInteresting(string shortcut)

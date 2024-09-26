@@ -6,7 +6,14 @@
     "tags": [ "sql, tsql", "formatter" ]
   },
   "assetFiles": [
-
+    {
+      "pathOnDisk": "art/window.png",
+      "targetPath": "art/window.png"
+    },
+    {
+      "pathOnDisk": "art/options.png",
+      "targetPath": "art/options.png"
+    }
   ],
   "overview": "README.md",
   "publisher": "MadsKristensen",
