@@ -13,6 +13,10 @@
     {
       "pathOnDisk": "art/options.png",
       "targetPath": "art/options.png"
+    },
+    {
+      "pathOnDisk": "art/demo.gif",
+      "targetPath": "art/demo.gif"
     }
   ],
   "overview": "README.md",
