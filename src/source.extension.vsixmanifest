@@ -4,10 +4,11 @@
         <Identity Id="ShortcutWindow.d11ce83f-99f9-41f5-8c58-9e5c4286fd2c" Version="1.0" Language="en-US" Publisher="Mads Kristensen" />
         <DisplayName>Shortcut Presenter</DisplayName>
         <Description xml:space="preserve">Shows what keyboard shortcuts are being used in the corner of the screen. Great for presentations and demos</Description>
+        <MoreInfo>https://github.com/madskristensen/ShortcutWindow</MoreInfo>
         <License>Resources\LICENSE.txt</License>
         <Icon>Resources\Icon.png</Icon>
         <PreviewImage>Resources\Icon.png</PreviewImage>
-        <Tags>keyboard, shortcut, presentation, demo</Tags>
+        <Tags>keyboard, shortcut, presentation</Tags>
     </Metadata>
     <Installation>
         <InstallationTarget Id="Microsoft.VisualStudio.Community" Version="[17.0, 18.0)">
