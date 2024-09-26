@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -47,35 +48,32 @@ namespace ShortcutWindow
             lblCommand.FontSize = settings.FontSizeCommand;
         }
 
-        private bool _isProcessing;
-
         private void OnBeforeCommandExecuted(string Guid, int ID, object CustomIn, object CustomOut, ref bool CancelDefault)
         {
-            if (_isProcessing || !_keys.Any(Keyboard.IsKeyDown))
+            if (!_keys.Any(Keyboard.IsKeyDown))
             {
                 return;
             }
 
-            _isProcessing = true;
-
-            ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
+            Debouncer.Debounce(Guid + ID, () =>
             {
-                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                Command cmd = _dte.Commands.Item(Guid, ID);
-                var shortcut = Commands.GetShortcut(cmd);
-
-                if (!string.IsNullOrEmpty(shortcut) && !string.IsNullOrEmpty(cmd.Name))
+                ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
                 {
-                    lblShortcut.Content = shortcut;
-                    lblCommand.Content = Commands.Prettify(cmd);
-                    lblCommand.ToolTip = new ToolTip()
-                    {
-                        Content = cmd.LocalizedName
-                    };
-                }
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                    Command cmd = _dte.Commands.Item(Guid, ID);
+                    var shortcut = Commands.GetShortcut(cmd);
 
-                _isProcessing = false;
-            }).FireAndForget();
+                    if (!string.IsNullOrEmpty(shortcut) && !string.IsNullOrEmpty(cmd.Name))
+                    {
+                        lblShortcut.Content = shortcut;
+                        lblCommand.Content = Commands.Prettify(cmd);
+                        lblCommand.ToolTip = new ToolTip()
+                        {
+                            Content = cmd.LocalizedName
+                        };
+                    }
+                }).FireAndForget();
+            }, 300);
         }
 
         private void btnPlayPause_Click(object sender, RoutedEventArgs e)
