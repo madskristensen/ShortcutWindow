@@ -11,7 +11,6 @@ namespace ShortcutWindow
         private readonly DTE2 _dte;
         private CommandEvents _events;
         private readonly Key[] _keys = [Key.LeftCtrl, Key.RightCtrl, Key.LeftAlt, Key.RightAlt, Key.LeftShift, Key.RightShift];
-        private bool _showShortcut;
 
         public ShortcutToolWindow(DTE2 dte, General settings)
         {
@@ -35,7 +34,6 @@ namespace ShortcutWindow
 
             _events = _dte.Events.CommandEvents;
             _events.BeforeExecute += OnBeforeCommandExecuted;
-            _events.AfterExecute += OnAfterCommandExecuted;
         }
 
         private void SetFontSize(General settings)
@@ -44,28 +42,29 @@ namespace ShortcutWindow
             lblCommand.FontSize = settings.FontSizeCommand;
         }
 
-        private void OnAfterCommandExecuted(string Guid, int ID, object CustomIn, object CustomOut)
-        {
-            ThreadHelper.ThrowIfNotOnUIThread();
-            if (!_showShortcut)
-            {
-                return;
-            }
-
-            Command cmd = _dte.Commands.Item(Guid, ID);
-            var shortcut = Commands.GetShortcut(cmd);
-
-            lblShortcut.Content = shortcut;
-            lblCommand.Content = Commands.Prettify(cmd);
-            lblCommand.ToolTip = new ToolTip()
-            {
-                Content = cmd.LocalizedName
-            };
-        }
+        bool _isProcessing;
 
         private void OnBeforeCommandExecuted(string Guid, int ID, object CustomIn, object CustomOut, ref bool CancelDefault)
         {
-            _showShortcut = _keys.Any(Keyboard.IsKeyDown);
+            if (_isProcessing || !_keys.Any(Keyboard.IsKeyDown)) return;
+
+            _isProcessing = true;
+
+            ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
+            {
+                await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+                Command cmd = _dte.Commands.Item(Guid, ID);
+                var shortcut = Commands.GetShortcut(cmd);
+
+                lblShortcut.Content = shortcut;
+                lblCommand.Content = Commands.Prettify(cmd);
+                lblCommand.ToolTip = new ToolTip()
+                {
+                    Content = cmd.LocalizedName
+                };
+
+                _isProcessing = false;
+            }).FireAndForget();
         }
     }
 }
