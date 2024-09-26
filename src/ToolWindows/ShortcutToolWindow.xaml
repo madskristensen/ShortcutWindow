@@ -11,14 +11,33 @@
              toolkit:Themes.UseVsTheme="True"
              mc:Ignorable="d">
     <Grid>
-        <StackPanel Orientation="Vertical" Width="auto">
 
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Orientation="Vertical" Width="auto" Grid.Row="0">
             <Label x:Name="lblShortcut"
                    FontSize="30"
-                   HorizontalAlignment="Center">Shortcut</Label>
+                   HorizontalAlignment="Center">Ready</Label>
             <Label x:Name="lblCommand"
                    FontSize="20"
-                   HorizontalAlignment="Center">Command</Label>
+                   HorizontalAlignment="Center">&#160;</Label>
         </StackPanel>
+
+        <Button Grid.Row="1" x:Name="btnPlayPause" Click="btnPlayPause_Click"
+                BorderThickness="0"
+                Width="40"
+                MinWidth="40"
+                Height="40"
+                FontSize="15"
+                Background="Transparent"
+                Visibility="Collapsed"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                ToolTip="Toggle the play state of the Shortcut Presenter">
+            ⏸️
+        </Button>
     </Grid>
 </UserControl>

@@ -10,10 +10,7 @@ namespace ShortcutWindow
 {
     public class MyToolWindow : BaseToolWindow<MyToolWindow>
     {
-        public override string GetTitle(int toolWindowId)
-        {
-            return Vsix.Name;
-        }
+        public override string GetTitle(int toolWindowId) => Vsix.Name;
 
         public override Type PaneType => typeof(Pane);
 
@@ -21,17 +18,17 @@ namespace ShortcutWindow
         {
             DTE2 dte = await VS.GetRequiredServiceAsync<DTE, DTE2>();
             General settings = await General.GetLiveInstanceAsync();
+            CommandBridge service = await Package.GetServiceAsync<CommandBridge, CommandBridge>();
 
-            return new ShortcutToolWindow(dte, settings);
+            return new ShortcutToolWindow(dte, settings, service);
         }
 
-        [Guid("0b20f013-c12d-40e1-9be7-4141a5b9942b")]
+        [Guid("f2194a0a-71df-42ad-a530-a4d3a0379ce8")]
         internal class Pane : ToolkitToolWindowPane
         {
             public Pane()
             {
                 BitmapImageMoniker = KnownMonikers.Keyboard;
-                Caption = Vsix.Name;
             }
         }
     }

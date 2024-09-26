@@ -15,8 +15,11 @@ Shows what keyboard shortcuts are being used in the corner of the screen. Great 
 
 ![Shortcut presenter window](art/window.png)
 
+You can pause an play by hovering the mouse over the window and clicking the play/pause button.
 
-You can change the font size in the options dialog.
+![Demo of Shortcut Presenter window](art/demo.gif)
+
+To change the font size, use the options dialog to make adjustments.
 
 ![Options dialog](art/options.png)
 

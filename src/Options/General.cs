@@ -13,9 +13,9 @@ namespace ShortcutWindow
     {
         [Category("General")]
         [DisplayName("Font size (shortcut)")]
-        [Description("The font size of the keyboard shortcut when shown in the tool window. Default: 40")]
-        [DefaultValue(40)]
-        public int FontSizeShortcut { get; set; } = 40;
+        [Description("The font size of the keyboard shortcut when shown in the tool window. Default: 35")]
+        [DefaultValue(35)]
+        public int FontSizeShortcut { get; set; } = 35;
 
         [Category("General")]
         [DisplayName("Font size (command)")]
