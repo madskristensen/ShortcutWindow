@@ -20,10 +20,11 @@
         <StackPanel Orientation="Vertical" Width="auto" Grid.Row="0">
             <Label x:Name="lblShortcut"
                    FontSize="30"
-                   HorizontalAlignment="Center">Ready</Label>
+                   HorizontalAlignment="Center"></Label>
             <Label x:Name="lblCommand"
                    FontSize="20"
-                   HorizontalAlignment="Center">&#160;</Label>
+                   Padding="0"
+                   HorizontalAlignment="Center">Ready</Label>
         </StackPanel>
 
         <StackPanel Name="pnlControls" Grid.Row="1" Orientation="Horizontal" Visibility="Collapsed" VerticalAlignment="Bottom" HorizontalAlignment="Left">

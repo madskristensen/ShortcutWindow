@@ -137,8 +137,8 @@ namespace ShortcutWindow
             if (_service.IsPlaying)
             {
                 _service.Stop();
-                lblShortcut.Content = "Paused";
-                lblCommand.Content = "\x00A0"; // no breaking space
+                lblShortcut.Content = " ";
+                lblCommand.Content = "Paused"; // no breaking space
                 btnPlayPause.Content = "▶️";
                 _events.BeforeExecute -= OnBeforeCommandExecuted;
                 _timer.Stop();
@@ -146,8 +146,8 @@ namespace ShortcutWindow
             else
             {
                 _service.Play();
-                lblShortcut.Content = "Ready";
-                lblCommand.Content = "Awaiting shortcut...";
+                lblShortcut.Content = " ";
+                lblCommand.Content = "Ready";
                 btnPlayPause.Content = "⏸";
                 _events.BeforeExecute += OnBeforeCommandExecuted;
             }
