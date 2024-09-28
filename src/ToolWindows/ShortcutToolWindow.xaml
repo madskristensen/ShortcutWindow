@@ -26,18 +26,21 @@
                    HorizontalAlignment="Center">&#160;</Label>
         </StackPanel>
 
-        <Button Grid.Row="1" x:Name="btnPlayPause" Click="btnPlayPause_Click"
-                BorderThickness="0"
-                Width="40"
-                MinWidth="40"
-                Height="40"
-                FontSize="15"
-                Background="Transparent"
-                Visibility="Collapsed"
-                HorizontalAlignment="Left"
-                VerticalAlignment="Bottom"
-                ToolTip="Toggle the play state of the Shortcut Presenter">
-            ⏸️
-        </Button>
+        <StackPanel Name="pnlControls" Grid.Row="1" Orientation="Horizontal" Visibility="Collapsed" VerticalAlignment="Bottom" HorizontalAlignment="Left">
+            <Button x:Name="btnPlayPause" Click="btnPlayPause_Click"
+                    BorderThickness="0"
+                    Width="40"
+                    MinWidth="40"
+                    Height="40"
+                    FontSize="15"
+                    Background="Transparent"
+                    VerticalAlignment="Center"
+                    ToolTip="Toggle the play state of the Shortcut Presenter">
+                ⏸️
+            </Button>
+            <TextBlock HorizontalAlignment="Left" VerticalAlignment="Center">
+                <Hyperlink Click="Hyperlink_Click">Settings</Hyperlink>
+            </TextBlock>
+        </StackPanel>
     </Grid>
 </UserControl>

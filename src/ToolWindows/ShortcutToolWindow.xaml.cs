@@ -1,17 +1,18 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using EnvDTE;
 using EnvDTE80;
+using static ShortcutWindow.OptionsProvider;
 
 namespace ShortcutWindow
 {
     public partial class ShortcutToolWindow : UserControl
     {
         private readonly DTE2 _dte;
+        private readonly General _settings;
         private readonly CommandBridge _service;
         private CommandEvents _events;
         private readonly Key[] _keys = [Key.LeftCtrl, Key.RightCtrl, Key.LeftAlt, Key.RightAlt, Key.LeftShift, Key.RightShift];
@@ -22,19 +23,20 @@ namespace ShortcutWindow
         public ShortcutToolWindow(DTE2 dte, General settings, CommandBridge service)
         {
             _dte = dte;
+            _settings = settings;
             _service = service;
             General.Saved += OnGeneralSettingsSaved;
 
             InitializeComponent();
             SetFontSize(settings);
 
-            _timer = new Timer(5 * 1000);
+            _timer = new Timer();
             _timer.Elapsed += OnTimerElapsed;
         }
 
         private void OnTimerElapsed(object sender, ElapsedEventArgs e)
         {
-            if (_lastCommandTime.AddSeconds(5) < DateTime.Now)
+            if (_lastCommandTime.AddSeconds(_settings.Timeout) < DateTime.Now)
             {
                 _lastCommand = null;
                 _timer.Stop();
@@ -48,12 +50,22 @@ namespace ShortcutWindow
             }
         }
 
-        protected override void OnMouseEnter(MouseEventArgs e) => btnPlayPause.Visibility = Visibility.Visible;
-        protected override void OnMouseLeave(MouseEventArgs e) => btnPlayPause.Visibility = _service.IsPlaying ? Visibility.Collapsed : Visibility.Visible;
+        protected override void OnMouseEnter(MouseEventArgs e) => pnlControls.Visibility = Visibility.Visible;
+        protected override void OnMouseLeave(MouseEventArgs e) => pnlControls.Visibility = Visibility.Collapsed;
 
         private void OnGeneralSettingsSaved(General settings)
         {
             SetFontSize(settings);
+
+            if (settings.Timeout > 0)
+            {
+                _timer.Interval = settings.Timeout * 1000;
+                _timer.Start();
+            }
+            else
+            {
+                _timer.Stop();
+            }
         }
 
         protected override void OnInitialized(EventArgs e)
@@ -108,8 +120,12 @@ namespace ShortcutWindow
                     }
 
                     _lastCommandTime = DateTime.Now;
-                    _timer.Start();
 
+                    if (_settings.Timeout > 0)
+                    {
+                        _timer.Interval = _settings.Timeout * 1000;
+                        _timer.Start();
+                    }
                 }).FireAndForget();
             }, 300);
         }
@@ -124,7 +140,6 @@ namespace ShortcutWindow
                 lblShortcut.Content = "Paused";
                 lblCommand.Content = "\x00A0"; // no breaking space
                 btnPlayPause.Content = "▶️";
-                btnPlayPause.Visibility = Visibility.Visible;
                 _events.BeforeExecute -= OnBeforeCommandExecuted;
                 _timer.Stop();
             }
@@ -134,9 +149,13 @@ namespace ShortcutWindow
                 lblShortcut.Content = "Ready";
                 lblCommand.Content = "Awaiting shortcut...";
                 btnPlayPause.Content = "⏸";
-                btnPlayPause.Visibility = Visibility.Collapsed;
                 _events.BeforeExecute += OnBeforeCommandExecuted;
             }
+        }
+
+        private void Hyperlink_Click(object sender, RoutedEventArgs e)
+        {
+            VsShellUtilities.ShowToolsOptionsPage(typeof(GeneralOptions).GUID);
         }
     }
 }
