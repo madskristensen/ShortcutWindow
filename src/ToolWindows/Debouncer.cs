@@ -6,6 +6,7 @@ namespace ShortcutWindow
     public static class Debouncer
     {
         private static readonly ConcurrentDictionary<string, CancellationTokenSource> _tokens = new();
+        
         public static void Debounce(string uniqueKey, Action action, int milliseconds)
         {
             CancellationTokenSource token = _tokens.AddOrUpdate(uniqueKey,
@@ -16,6 +17,7 @@ namespace ShortcutWindow
                 (key, existingToken) => //key found - cancel task and recreate
                 {
                     existingToken.Cancel(); //cancel previous
+                    existingToken.Dispose(); // Dispose the cancelled token
                     return new CancellationTokenSource();
                 }
             );
@@ -26,10 +28,12 @@ namespace ShortcutWindow
                 if (!task.IsCanceled)
                 {
                     action(); //run
-                    if (_tokens.TryRemove(uniqueKey, out CancellationTokenSource cts))
-                    {
-                        cts.Dispose(); //cleanup
-                    }
+                }
+                
+                // Always clean up the token when task completes (whether cancelled or not)
+                if (_tokens.TryRemove(uniqueKey, out CancellationTokenSource cts))
+                {
+                    cts.Dispose(); //cleanup
                 }
             }, token.Token);
         }

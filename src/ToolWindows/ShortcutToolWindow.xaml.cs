@@ -9,7 +9,7 @@ using static ShortcutWindow.OptionsProvider;
 
 namespace ShortcutWindow
 {
-    public partial class ShortcutToolWindow : UserControl
+    public partial class ShortcutToolWindow : UserControl, IDisposable
     {
         private readonly DTE2 _dte;
         private readonly General _settings;
@@ -19,6 +19,8 @@ namespace ShortcutWindow
         private Command _lastCommand;
         private DateTime _lastCommandTime;
         private readonly Timer _timer;
+        private bool _disposed = false;
+        private int _currentTimeoutInterval = -1; // Track current interval to avoid unnecessary timer restarts
 
         public ShortcutToolWindow(DTE2 dte, General settings, CommandBridge service)
         {
@@ -57,14 +59,21 @@ namespace ShortcutWindow
         {
             SetFontSize(settings);
 
+            var timeoutMilliseconds = settings.Timeout * 1000;
             if (settings.Timeout > 0)
             {
-                _timer.Interval = settings.Timeout * 1000;
+                // Only update timer if interval changed
+                if (_currentTimeoutInterval != timeoutMilliseconds)
+                {
+                    _timer.Interval = timeoutMilliseconds;
+                    _currentTimeoutInterval = timeoutMilliseconds;
+                }
                 _timer.Start();
             }
             else
             {
                 _timer.Stop();
+                _currentTimeoutInterval = -1;
             }
         }
 
@@ -87,7 +96,18 @@ namespace ShortcutWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            if (!_keys.Any(Keyboard.IsKeyDown))
+            // Use simple loop instead of LINQ for better performance
+            bool anyKeyDown = false;
+            for (int i = 0; i < _keys.Length; i++)
+            {
+                if (Keyboard.IsKeyDown(_keys[i]))
+                {
+                    anyKeyDown = true;
+                    break;
+                }
+            }
+
+            if (!anyKeyDown)
             {
                 return;
             }
@@ -102,7 +122,10 @@ namespace ShortcutWindow
 
             _lastCommand = cmd;
 
-            Debouncer.Debounce(Guid + ID, () =>
+            // Use string interpolation for better performance
+            string debounceKey = $"{Guid}{ID}";
+            
+            Debouncer.Debounce(debounceKey, () =>
             {
                 ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
                 {
@@ -113,17 +136,21 @@ namespace ShortcutWindow
                     {
                         lblShortcut.Content = shortcut;
                         lblCommand.Content = Commands.Prettify(cmd);
-                        lblCommand.ToolTip = new ToolTip()
-                        {
-                            Content = cmd.LocalizedName
-                        };
+                        // Set tooltip text directly instead of creating new ToolTip object
+                        lblCommand.ToolTip = cmd.LocalizedName;
                     }
 
                     _lastCommandTime = DateTime.Now;
 
+                    var timeoutMilliseconds = _settings.Timeout * 1000;
                     if (_settings.Timeout > 0)
                     {
-                        _timer.Interval = _settings.Timeout * 1000;
+                        // Only update timer if interval changed
+                        if (_currentTimeoutInterval != timeoutMilliseconds)
+                        {
+                            _timer.Interval = timeoutMilliseconds;
+                            _currentTimeoutInterval = timeoutMilliseconds;
+                        }
                         _timer.Start();
                     }
                 }).FireAndForget();
@@ -137,7 +164,7 @@ namespace ShortcutWindow
             if (_service.IsPlaying)
             {
                 _service.Stop();
-                lblShortcut.Content = " ";
+                lblShortcut.Content = " ";
                 lblCommand.Content = "Paused"; // no breaking space
                 btnPlayPause.Content = "▶️";
                 _events.BeforeExecute -= OnBeforeCommandExecuted;
@@ -146,7 +173,7 @@ namespace ShortcutWindow
             else
             {
                 _service.Play();
-                lblShortcut.Content = " ";
+                lblShortcut.Content = " ";
                 lblCommand.Content = "Ready";
                 btnPlayPause.Content = "⏸";
                 _events.BeforeExecute += OnBeforeCommandExecuted;
@@ -156,6 +183,32 @@ namespace ShortcutWindow
         private void Hyperlink_Click(object sender, RoutedEventArgs e)
         {
             VsShellUtilities.ShowToolsOptionsPage(typeof(GeneralOptions).GUID);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed && disposing)
+            {
+                // Clean up event handlers
+                General.Saved -= OnGeneralSettingsSaved;
+                
+                if (_events != null)
+                {
+                    _events.BeforeExecute -= OnBeforeCommandExecuted;
+                }
+
+                // Dispose timer
+                _timer?.Stop();
+                _timer?.Dispose();
+
+                _disposed = true;
+            }
         }
     }
 }
