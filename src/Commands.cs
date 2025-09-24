@@ -66,9 +66,24 @@ namespace ShortcutWindow
             }
 
             // Use IndexOf for potentially better performance than Contains
-            return shortcut.IndexOf("Ctrl", System.StringComparison.Ordinal) >= 0 || 
-                   shortcut.IndexOf("Alt", System.StringComparison.Ordinal) >= 0 || 
-                   shortcut.IndexOf("Shift", System.StringComparison.Ordinal) >= 0;
+            // Check for modifier keys
+            if (shortcut.IndexOf("Ctrl", System.StringComparison.Ordinal) >= 0 || 
+                shortcut.IndexOf("Alt", System.StringComparison.Ordinal) >= 0 || 
+                shortcut.IndexOf("Shift", System.StringComparison.Ordinal) >= 0)
+            {
+                return true;
+            }
+
+            // Check for function keys F1-F12
+            for (int i = 1; i <= 12; i++)
+            {
+                if (shortcut.IndexOf($"F{i}", System.StringComparison.Ordinal) >= 0)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }
