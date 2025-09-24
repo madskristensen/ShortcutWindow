@@ -66,9 +66,32 @@ namespace ShortcutWindow
             }
 
             // Use IndexOf for potentially better performance than Contains
-            return shortcut.IndexOf("Ctrl", System.StringComparison.Ordinal) >= 0 || 
-                   shortcut.IndexOf("Alt", System.StringComparison.Ordinal) >= 0 || 
-                   shortcut.IndexOf("Shift", System.StringComparison.Ordinal) >= 0;
+            // Check for modifier keys
+            if (shortcut.IndexOf("Ctrl", System.StringComparison.Ordinal) >= 0 || 
+                shortcut.IndexOf("Alt", System.StringComparison.Ordinal) >= 0 || 
+                shortcut.IndexOf("Shift", System.StringComparison.Ordinal) >= 0)
+            {
+                return true;
+            }
+
+            // Check for function keys F1-F12 with word boundaries to avoid false positives like F13
+            for (int i = 1; i <= 12; i++)
+            {
+                string functionKey = $"F{i}";
+                int index = shortcut.IndexOf(functionKey, System.StringComparison.Ordinal);
+                if (index >= 0)
+                {
+                    // Ensure it's a complete function key (not part of F13, F14, etc.)
+                    // Check that the character after the function key is not a digit
+                    int nextCharIndex = index + functionKey.Length;
+                    if (nextCharIndex >= shortcut.Length || !char.IsDigit(shortcut[nextCharIndex]))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
     }
 }
