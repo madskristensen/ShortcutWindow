@@ -2,6 +2,7 @@
 using System.Text.RegularExpressions;
 using EnvDTE;
 using System.Collections.Generic;
+using System;
 
 namespace ShortcutWindow
 {
@@ -40,6 +41,13 @@ namespace ShortcutWindow
             return null;
         }
 
+        /// <summary>
+        /// Gets the keyboard shortcut for a command, attempting to match the specific shortcut
+        /// that was actually pressed by the user rather than just returning the first binding.
+        /// </summary>
+        /// <param name="cmd">The Visual Studio command</param>
+        /// <param name="pressedKeys">The keys currently being pressed by the user</param>
+        /// <returns>The matching keyboard shortcut string, or null if none found</returns>
         public static string GetShortcut(Command cmd, string pressedKeys)
         {
             ThreadHelper.ThrowIfNotOnUIThread();

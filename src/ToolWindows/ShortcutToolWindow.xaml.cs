@@ -7,6 +7,7 @@ using EnvDTE;
 using EnvDTE80;
 using static ShortcutWindow.OptionsProvider;
 using System.Collections.Generic;
+using System;
 
 namespace ShortcutWindow
 {
