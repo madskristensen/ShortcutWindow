@@ -6,6 +6,7 @@ using System.Windows.Input;
 using EnvDTE;
 using EnvDTE80;
 using static ShortcutWindow.OptionsProvider;
+using System.Collections.Generic;
 
 namespace ShortcutWindow
 {
@@ -92,22 +93,127 @@ namespace ShortcutWindow
             lblCommand.FontSize = settings.FontSizeCommand;
         }
 
+        private string GetCurrentlyPressedKeys()
+        {
+            var pressedKeys = new List<string>();
+
+            // Check modifier keys
+            if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+            {
+                pressedKeys.Add("Ctrl");
+            }
+            if (Keyboard.IsKeyDown(Key.LeftAlt) || Keyboard.IsKeyDown(Key.RightAlt))
+            {
+                pressedKeys.Add("Alt");
+            }
+            if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+            {
+                pressedKeys.Add("Shift");
+            }
+
+            // Check for other keys that might be pressed
+            // Function keys
+            for (int i = 1; i <= 12; i++)
+            {
+                Key functionKey = (Key)Enum.Parse(typeof(Key), $"F{i}");
+                if (Keyboard.IsKeyDown(functionKey))
+                {
+                    pressedKeys.Add($"F{i}");
+                }
+            }
+
+            // Common keys
+            var commonKeys = new Dictionary<Key, string>
+            {
+                { Key.Q, "Q" },
+                { Key.W, "W" },
+                { Key.E, "E" },
+                { Key.R, "R" },
+                { Key.T, "T" },
+                { Key.Y, "Y" },
+                { Key.U, "U" },
+                { Key.I, "I" },
+                { Key.O, "O" },
+                { Key.P, "P" },
+                { Key.A, "A" },
+                { Key.S, "S" },
+                { Key.D, "D" },
+                { Key.F, "F" },
+                { Key.G, "G" },
+                { Key.H, "H" },
+                { Key.J, "J" },
+                { Key.K, "K" },
+                { Key.L, "L" },
+                { Key.Z, "Z" },
+                { Key.X, "X" },
+                { Key.C, "C" },
+                { Key.V, "V" },
+                { Key.B, "B" },
+                { Key.N, "N" },
+                { Key.M, "M" },
+                { Key.D1, "1" },
+                { Key.D2, "2" },
+                { Key.D3, "3" },
+                { Key.D4, "4" },
+                { Key.D5, "5" },
+                { Key.D6, "6" },
+                { Key.D7, "7" },
+                { Key.D8, "8" },
+                { Key.D9, "9" },
+                { Key.D0, "0" },
+                { Key.OemComma, "," },
+                { Key.OemPeriod, "." },
+                { Key.OemQuestion, "/" },
+                { Key.OemSemicolon, ";" },
+                { Key.OemQuotes, "'" },
+                { Key.OemOpenBrackets, "[" },
+                { Key.OemCloseBrackets, "]" },
+                { Key.OemPipe, "\\" },
+                { Key.OemMinus, "-" },
+                { Key.OemPlus, "=" },
+                { Key.Space, "Space" },
+                { Key.Enter, "Enter" },
+                { Key.Escape, "Escape" },
+                { Key.Tab, "Tab" },
+                { Key.Back, "Backspace" },
+                { Key.Delete, "Delete" },
+                { Key.Insert, "Insert" },
+                { Key.Home, "Home" },
+                { Key.End, "End" },
+                { Key.PageUp, "PageUp" },
+                { Key.PageDown, "PageDown" },
+                { Key.Up, "Up" },
+                { Key.Down, "Down" },
+                { Key.Left, "Left" },
+                { Key.Right, "Right" }
+            };
+
+            foreach (var kvp in commonKeys)
+            {
+                if (Keyboard.IsKeyDown(kvp.Key))
+                {
+                    pressedKeys.Add(kvp.Value);
+                }
+            }
+
+            // Return empty string if no interesting keys are pressed
+            if (pressedKeys.Count == 0)
+            {
+                return string.Empty;
+            }
+
+            // Return the keys in a format similar to Visual Studio shortcuts
+            return string.Join("+", pressedKeys);
+        }
+
         private void OnBeforeCommandExecuted(string Guid, int ID, object CustomIn, object CustomOut, ref bool CancelDefault)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
-            // Use simple loop instead of LINQ for better performance
-            bool anyKeyDown = false;
-            for (int i = 0; i < _keys.Length; i++)
-            {
-                if (Keyboard.IsKeyDown(_keys[i]))
-                {
-                    anyKeyDown = true;
-                    break;
-                }
-            }
+            // Capture the currently pressed keys
+            string pressedKeys = GetCurrentlyPressedKeys();
 
-            if (!anyKeyDown)
+            if (string.IsNullOrEmpty(pressedKeys))
             {
                 return;
             }
@@ -130,7 +236,7 @@ namespace ShortcutWindow
                 ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    var shortcut = Commands.GetShortcut(cmd);
+                    var shortcut = Commands.GetShortcut(cmd, pressedKeys);
 
                     if (!string.IsNullOrEmpty(shortcut) && !string.IsNullOrEmpty(cmd.Name))
                     {

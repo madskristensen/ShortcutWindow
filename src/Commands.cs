@@ -39,6 +39,51 @@ namespace ShortcutWindow
             return null;
         }
 
+        public static string GetShortcut(Command cmd, string pressedKeys)
+        {
+            ThreadHelper.ThrowIfNotOnUIThread();
+
+            if (cmd == null || string.IsNullOrEmpty(cmd.Name))
+            {
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(pressedKeys))
+            {
+                // Fall back to the original method if no pressed keys provided
+                return GetShortcut(cmd);
+            }
+
+            // Check all bindings to find the one that matches the pressed keys
+            var allBindings = (object[])cmd.Bindings;
+            
+            foreach (string binding in allBindings)
+            {
+                if (string.IsNullOrEmpty(binding))
+                    continue;
+
+                var colonIndex = binding.IndexOf(':');
+                if (colonIndex >= 0 && colonIndex + 2 < binding.Length)
+                {
+                    var shortcut = binding.Substring(colonIndex + 2);
+
+                    if (!IsShortcutInteresting(shortcut))
+                    {
+                        continue;
+                    }
+
+                    // Check if this shortcut matches the pressed keys
+                    if (DoesShortcutMatch(shortcut, pressedKeys))
+                    {
+                        return shortcut;
+                    }
+                }
+            }
+
+            // If no specific match found, fall back to the original method
+            return GetShortcut(cmd);
+        }
+
         public static string Prettify(Command cmd)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -92,6 +137,31 @@ namespace ShortcutWindow
             }
 
             return false;
+        }
+
+        private static bool DoesShortcutMatch(string shortcut, string pressedKeys)
+        {
+            if (string.IsNullOrEmpty(shortcut) || string.IsNullOrEmpty(pressedKeys))
+            {
+                return false;
+            }
+
+            // Normalize both strings for comparison (remove spaces, convert to lowercase)
+            string normalizedShortcut = shortcut.Replace(" ", "").ToLowerInvariant();
+            string normalizedPressed = pressedKeys.Replace(" ", "").ToLowerInvariant();
+
+            // Direct comparison first
+            if (normalizedShortcut == normalizedPressed)
+            {
+                return true;
+            }
+
+            // Handle common VS shortcut format variations
+            // VS shortcuts might be in format like "Ctrl+Q" while pressed keys might be "CtrlQ"
+            normalizedShortcut = normalizedShortcut.Replace("+", "");
+            normalizedPressed = normalizedPressed.Replace("+", "");
+
+            return normalizedShortcut == normalizedPressed;
         }
     }
 }
