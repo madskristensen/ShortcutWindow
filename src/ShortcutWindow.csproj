@@ -57,6 +57,7 @@
       <DependentUpon>source.extension.vsixmanifest</DependentUpon>
     </Compile>
     <Compile Include="ToolWindows\Debouncer.cs" />
+    <Compile Include="ToolWindows\KeyboardHook.cs" />
     <Compile Include="VSCommandTable.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

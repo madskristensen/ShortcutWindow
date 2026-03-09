@@ -91,6 +91,12 @@ namespace ShortcutWindow
         private bool _disposed = false;
         private int _currentTimeoutInterval = -1; // Track current interval to avoid unnecessary timer restarts
 
+        // Keyboard hook for detecting shortcuts intercepted by other extensions
+        private readonly KeyboardHook _keyboardHook;
+        private string _lastDetectedShortcut;
+        private DateTime _lastDetectedTime;
+        private bool _commandHandledShortcut; // Flag to track if BeforeExecute handled the shortcut
+
         public ShortcutToolWindow(DTE2 dte, General settings, CommandBridge service)
         {
             _dte = dte;
@@ -103,6 +109,10 @@ namespace ShortcutWindow
 
             _timer = new Timer();
             _timer.Elapsed += OnTimerElapsed;
+
+            // Initialize keyboard hook for capturing intercepted shortcuts
+            _keyboardHook = new KeyboardHook();
+            _keyboardHook.ShortcutDetected += OnShortcutDetected;
         }
 
         private void OnTimerElapsed(object sender, ElapsedEventArgs e)
@@ -223,6 +233,9 @@ namespace ShortcutWindow
         {
             ThreadHelper.ThrowIfNotOnUIThread();
 
+            // Mark that a command handled this shortcut (so keyboard hook won't show "intercepted")
+            _commandHandledShortcut = true;
+
             // Capture the currently pressed keys
             string pressedKeys = GetCurrentlyPressedKeys();
 
@@ -243,7 +256,7 @@ namespace ShortcutWindow
 
             // Use string interpolation for better performance
             string debounceKey = $"{Guid}{ID}";
-            
+
             Debouncer.Debounce(debounceKey, () =>
             {
                 ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
@@ -281,6 +294,57 @@ namespace ShortcutWindow
             }, 300);
         }
 
+        /// <summary>
+        /// Called when the keyboard hook detects a shortcut-like key combination.
+        /// This handles shortcuts that may have been intercepted by other extensions.
+        /// </summary>
+        private void OnShortcutDetected(object sender, ShortcutDetectedEventArgs e)
+        {
+            // Store the detected shortcut and time
+            _lastDetectedShortcut = e.Shortcut;
+            _lastDetectedTime = DateTime.Now;
+
+            // Reset the flag - will be set to true if BeforeExecute fires
+            _commandHandledShortcut = false;
+
+            // Use debouncer to wait a bit and see if a command handles this shortcut
+            // The delay should be slightly longer than the command debounce (300ms)
+            Debouncer.Debounce("keyboard_hook", () =>
+            {
+                ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
+                {
+                    await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                    // Only show if no command handled it and we're still playing
+                    if (!_commandHandledShortcut && _service.IsPlaying)
+                    {
+                        // Check if this shortcut was recently detected (within 500ms)
+                        if ((DateTime.Now - _lastDetectedTime).TotalMilliseconds < 500)
+                        {
+                            DisplayShortcut(_lastDetectedShortcut);
+                            lblCommand.Content = " ";
+                            lblCommand.ToolTip = null;
+
+                            PlayFadeInAnimation();
+
+                            _lastCommandTime = DateTime.Now;
+
+                            var timeoutMilliseconds = _settings.Timeout * 1000;
+                            if (_settings.Timeout > 0)
+                            {
+                                if (_currentTimeoutInterval != timeoutMilliseconds)
+                                {
+                                    _timer.Interval = timeoutMilliseconds;
+                                    _currentTimeoutInterval = timeoutMilliseconds;
+                                }
+                                _timer.Start();
+                            }
+                        }
+                    }
+                }).FireAndForget();
+            }, 350); // Slightly longer than the command debounce delay
+        }
+
         private void btnPlayPause_Click(object sender, RoutedEventArgs e)
         {
             ThreadHelper.ThrowIfNotOnUIThread();
@@ -292,6 +356,7 @@ namespace ShortcutWindow
                 lblCommand.Content = "Paused"; // no breaking space
                 btnPlayPause.Content = "▶️";
                 _events.BeforeExecute -= OnBeforeCommandExecuted;
+                _keyboardHook.IsEnabled = false;
                 _timer.Stop();
 
                 // Hide chord elements
@@ -305,6 +370,7 @@ namespace ShortcutWindow
                 lblCommand.Content = "Ready";
                 btnPlayPause.Content = "⏸";
                 _events.BeforeExecute += OnBeforeCommandExecuted;
+                _keyboardHook.IsEnabled = true;
             }
         }
 
@@ -370,10 +436,17 @@ namespace ShortcutWindow
             {
                 // Clean up event handlers
                 General.Saved -= OnGeneralSettingsSaved;
-                
+
                 if (_events != null)
                 {
                     _events.BeforeExecute -= OnBeforeCommandExecuted;
+                }
+
+                // Clean up keyboard hook
+                if (_keyboardHook != null)
+                {
+                    _keyboardHook.ShortcutDetected -= OnShortcutDetected;
+                    _keyboardHook.Dispose();
                 }
 
                 // Dispose timer
