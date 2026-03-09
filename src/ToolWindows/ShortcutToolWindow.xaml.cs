@@ -86,7 +86,10 @@ namespace ShortcutWindow
         private CommandEvents _events;
         private readonly Key[] _keys = [Key.LeftCtrl, Key.RightCtrl, Key.LeftAlt, Key.RightAlt, Key.LeftShift, Key.RightShift, Key.F1, Key.F2, Key.F3, Key.F4, Key.F5, Key.F6, Key.F7, Key.F8, Key.F9, Key.F10, Key.F11, Key.F12];
         private Command _lastCommand;
+        private string _lastCommandKey; // Store command identifier for reliable repeat detection
         private DateTime _lastCommandTime;
+        private int _repeatCount = 1;
+        private const double RepeatDetectionWindowSeconds = 3.0; // Time window for counting repeated shortcuts
         private readonly Timer _timer;
         private bool _disposed = false;
         private int _currentTimeoutInterval = -1; // Track current interval to avoid unnecessary timer restarts
@@ -120,6 +123,8 @@ namespace ShortcutWindow
             if (_lastCommandTime.AddSeconds(_settings.Timeout) < DateTime.Now)
             {
                 _lastCommand = null;
+                _lastCommandKey = null;
+                _repeatCount = 1;
                 _timer.Stop();
 
                 ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
@@ -132,9 +137,10 @@ namespace ShortcutWindow
                     lblShortcut.Content = "Ready";
                     lblCommand.Content = "Awaiting shortcut...";
 
-                    // Hide chord elements
+                    // Hide chord elements and repeat counter
                     lblChordSeparator.Visibility = Visibility.Collapsed;
                     lblShortcutChord.Visibility = Visibility.Collapsed;
+                    lblRepeatCount.Visibility = Visibility.Collapsed;
                 }).FireAndForget();
             }
         }
@@ -246,18 +252,24 @@ namespace ShortcutWindow
 
             Command cmd = _dte.Commands.Item(Guid, ID);
 
-            if (cmd == _lastCommand)
+            // Use command key for reliable repeat detection (object reference may differ)
+            string commandKey = $"{Guid}{ID}";
+            bool isSameCommand = commandKey == _lastCommandKey;
+            bool isWithinRepeatWindow = (DateTime.Now - _lastCommandTime).TotalSeconds < RepeatDetectionWindowSeconds;
+
+            if (isSameCommand && isWithinRepeatWindow)
             {
                 _lastCommandTime = DateTime.Now;
+                _repeatCount++;
+                UpdateRepeatCountDisplay();
                 return;
             }
 
             _lastCommand = cmd;
+            _lastCommandKey = commandKey;
+            _repeatCount = 1;
 
-            // Use string interpolation for better performance
-            string debounceKey = $"{Guid}{ID}";
-
-            Debouncer.Debounce(debounceKey, () =>
+            Debouncer.Debounce(commandKey, () =>
             {
                 ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
                 {
@@ -359,9 +371,15 @@ namespace ShortcutWindow
                 _keyboardHook.IsEnabled = false;
                 _timer.Stop();
 
-                // Hide chord elements
+                // Hide chord elements and repeat counter
                 lblChordSeparator.Visibility = Visibility.Collapsed;
                 lblShortcutChord.Visibility = Visibility.Collapsed;
+                lblRepeatCount.Visibility = Visibility.Collapsed;
+
+                // Reset repeat tracking
+                _lastCommand = null;
+                _lastCommandKey = null;
+                _repeatCount = 1;
             }
             else
             {
@@ -399,6 +417,25 @@ namespace ShortcutWindow
                 lblShortcut.Content = shortcut;
                 lblChordSeparator.Visibility = Visibility.Collapsed;
                 lblShortcutChord.Visibility = Visibility.Collapsed;
+            }
+
+            // Update repeat counter based on current count (handles debounce race condition)
+            UpdateRepeatCountDisplay();
+        }
+
+        /// <summary>
+        /// Updates the repeat count display when the same shortcut is pressed multiple times.
+        /// </summary>
+        private void UpdateRepeatCountDisplay()
+        {
+            if (_repeatCount > 1)
+            {
+                lblRepeatCount.Content = $"(x{_repeatCount})";
+                lblRepeatCount.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                lblRepeatCount.Visibility = Visibility.Collapsed;
             }
         }
 

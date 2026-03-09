@@ -58,6 +58,13 @@
                        FontSize="30"
                        Visibility="Collapsed"
                        HorizontalAlignment="Center"></Label>
+                <!-- Repeat counter for when the same shortcut is pressed multiple times -->
+                <Label x:Name="lblRepeatCount"
+                       FontSize="20"
+                       Visibility="Collapsed"
+                       VerticalAlignment="Center"
+                       Margin="5,0,0,0"
+                       HorizontalAlignment="Center"></Label>
             </StackPanel>
             <Label x:Name="lblCommand"
                    FontSize="20"
