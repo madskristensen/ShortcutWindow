@@ -409,29 +409,59 @@ namespace ShortcutWindow
         }
 
         /// <summary>
-        /// Displays a shortcut, handling chord shortcuts (e.g., "Ctrl+K, Ctrl+C") with visual separation.
+        /// Displays a shortcut, compressing chord shortcuts (e.g., "Ctrl+K, Ctrl+C" becomes "Ctrl+K+C").
         /// </summary>
         private void DisplayShortcut(string shortcut)
         {
+            // Hide chord elements - we now display everything in a single label
+            lblChordSeparator.Visibility = Visibility.Collapsed;
+            lblShortcutChord.Visibility = Visibility.Collapsed;
+
             // Check if this is a chord shortcut (contains ", " pattern)
             if (shortcut.Contains(", "))
             {
-                var parts = shortcut.Split(new[] { ", " }, 2, StringSplitOptions.None);
-                lblShortcut.Content = parts[0];
-                lblChordSeparator.Visibility = Visibility.Visible;
-                lblShortcutChord.Content = parts[1];
-                lblShortcutChord.Visibility = Visibility.Visible;
+                lblShortcut.Content = CompressChordShortcut(shortcut);
             }
             else
             {
-                // Single shortcut - hide chord elements
                 lblShortcut.Content = shortcut;
-                lblChordSeparator.Visibility = Visibility.Collapsed;
-                lblShortcutChord.Visibility = Visibility.Collapsed;
             }
 
             // Update repeat counter based on current count (handles debounce race condition)
             UpdateRepeatCountDisplay();
+        }
+
+        /// <summary>
+        /// Compresses a chord shortcut like "Ctrl+K, Ctrl+C" to "Ctrl+K+C".
+        /// Extracts the final key from each chord part and combines them.
+        /// </summary>
+        private static string CompressChordShortcut(string shortcut)
+        {
+            var parts = shortcut.Split(new[] { ", " }, StringSplitOptions.RemoveEmptyEntries);
+
+            if (parts.Length < 2)
+            {
+                return shortcut;
+            }
+
+            // Start with the first part as-is (e.g., "Ctrl+K")
+            var result = parts[0];
+
+            // For subsequent parts, extract just the final key
+            for (int i = 1; i < parts.Length; i++)
+            {
+                string part = parts[i];
+                int lastPlusIndex = part.LastIndexOf('+');
+
+                // Extract just the key portion (e.g., "Ctrl+C" -> "C")
+                string key = lastPlusIndex >= 0 && lastPlusIndex < part.Length - 1
+                    ? part.Substring(lastPlusIndex + 1)
+                    : part;
+
+                result += "+" + key;
+            }
+
+            return result;
         }
 
         /// <summary>
