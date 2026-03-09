@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Text;
 using System.Windows;
 using System.Windows.Input;
 
@@ -82,23 +82,38 @@ namespace ShortcutWindow
             if (!hasAnyModifier && !isFunctionKey)
                 return null;
 
-            var parts = new List<string>();
+            // Use StringBuilder to avoid List<string> allocation
+            var sb = new StringBuilder(24); // Pre-size for typical shortcut length
 
             if (hasCtrl)
-                parts.Add("Ctrl");
+            {
+                sb.Append("Ctrl");
+            }
             if (hasAlt)
-                parts.Add("Alt");
+            {
+                if (sb.Length > 0) sb.Append('+');
+                sb.Append("Alt");
+            }
             if (hasShift)
-                parts.Add("Shift");
+            {
+                if (sb.Length > 0) sb.Append('+');
+                sb.Append("Shift");
+            }
             if (hasWin)
-                parts.Add("Win");
+            {
+                if (sb.Length > 0) sb.Append('+');
+                sb.Append("Win");
+            }
 
             // Add the main key
             string keyName = GetKeyDisplayName(key);
             if (!string.IsNullOrEmpty(keyName))
-                parts.Add(keyName);
+            {
+                if (sb.Length > 0) sb.Append('+');
+                sb.Append(keyName);
+            }
 
-            return parts.Count > 0 ? string.Join("+", parts) : null;
+            return sb.Length > 0 ? sb.ToString() : null;
         }
 
         /// <summary>

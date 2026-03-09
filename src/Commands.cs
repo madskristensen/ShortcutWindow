@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Text.RegularExpressions;
 using EnvDTE;
 using System.Collections.Generic;
@@ -10,6 +10,13 @@ namespace ShortcutWindow
     {
         // Cache the regex for better performance since it's used frequently
         private static readonly Regex CamelCaseRegex = new Regex("[a-z][A-Z]", RegexOptions.Compiled);
+
+        // Pre-cached function key strings to avoid allocations in IsShortcutInteresting
+        private static readonly string[] FunctionKeyStrings = new string[]
+        {
+            "F1", "F2", "F3", "F4", "F5", "F6",
+            "F7", "F8", "F9", "F10", "F11", "F12"
+        };
 
         public static string GetShortcut(Command cmd)
         {
@@ -153,9 +160,8 @@ namespace ShortcutWindow
             }
 
             // Check for function keys F1-F12 with word boundaries to avoid false positives like F13
-            for (int i = 1; i <= 12; i++)
+            foreach (string functionKey in FunctionKeyStrings)
             {
-                string functionKey = $"F{i}";
                 int index = shortcut.IndexOf(functionKey, System.StringComparison.Ordinal);
                 if (index >= 0)
                 {
@@ -179,11 +185,11 @@ namespace ShortcutWindow
                 return false;
             }
 
-            // Normalize both strings for comparison
+            // Normalize both strings for comparison (cache these to avoid recomputing)
             string normalizedShortcut = NormalizeShortcut(shortcut);
             string normalizedPressed = NormalizeShortcut(pressedKeys);
 
-            // Direct comparison first
+            // Direct comparison first - most common case
             if (normalizedShortcut == normalizedPressed)
             {
                 return true;
@@ -195,11 +201,19 @@ namespace ShortcutWindow
             var shortcutVariations = GetShortcutVariations(shortcut);
             var pressedVariations = GetShortcutVariations(pressedKeys);
 
+            // Pre-normalize pressed variations to avoid redundant calls
+            var normalizedPressedVariations = new string[pressedVariations.Count];
+            for (int i = 0; i < pressedVariations.Count; i++)
+            {
+                normalizedPressedVariations[i] = NormalizeShortcut(pressedVariations[i]);
+            }
+
             foreach (var shortcutVar in shortcutVariations)
             {
-                foreach (var pressedVar in pressedVariations)
+                string normalizedShortcutVar = NormalizeShortcut(shortcutVar);
+                foreach (var normalizedPressedVar in normalizedPressedVariations)
                 {
-                    if (NormalizeShortcut(shortcutVar) == NormalizeShortcut(pressedVar))
+                    if (normalizedShortcutVar == normalizedPressedVar)
                     {
                         return true;
                     }

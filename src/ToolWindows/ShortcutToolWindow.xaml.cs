@@ -14,7 +14,19 @@ namespace ShortcutWindow
 {
     public partial class ShortcutToolWindow : UserControl, IDisposable
     {
-        // Static readonly dictionary to avoid recreating on every keystroke
+        // Static readonly arrays to avoid recreating on every keystroke
+        private static readonly Key[] FunctionKeys = new Key[]
+        {
+            Key.F1, Key.F2, Key.F3, Key.F4, Key.F5, Key.F6,
+            Key.F7, Key.F8, Key.F9, Key.F10, Key.F11, Key.F12
+        };
+
+        private static readonly string[] FunctionKeyNames = new string[]
+        {
+            "F1", "F2", "F3", "F4", "F5", "F6",
+            "F7", "F8", "F9", "F10", "F11", "F12"
+        };
+
         private static readonly Dictionary<Key, string> CommonKeys = new Dictionary<Key, string>
         {
             { Key.Q, "Q" },
@@ -206,13 +218,12 @@ namespace ShortcutWindow
             }
 
             // Check for other keys that might be pressed
-            // Function keys
-            for (int i = 1; i <= 12; i++)
+            // Function keys - use cached arrays to avoid Enum.Parse and string allocation
+            for (int i = 0; i < FunctionKeys.Length; i++)
             {
-                Key functionKey = (Key)Enum.Parse(typeof(Key), $"F{i}");
-                if (Keyboard.IsKeyDown(functionKey))
+                if (Keyboard.IsKeyDown(FunctionKeys[i]))
                 {
-                    pressedKeys.Add($"F{i}");
+                    pressedKeys.Add(FunctionKeyNames[i]);
                 }
             }
 
