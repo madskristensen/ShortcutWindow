@@ -27,18 +27,27 @@ namespace ShortcutWindow
 
         /// <summary>
         /// Gets or sets whether the hook is actively monitoring keyboard input.
+        /// When disabled, the hook unsubscribes from input events to avoid any overhead.
         /// </summary>
         public bool IsEnabled
         {
             get => _isEnabled;
-            set => _isEnabled = value;
+            set
+            {
+                if (_isEnabled == value || _disposed)
+                    return;
+
+                _isEnabled = value;
+
+                if (value)
+                    InputManager.Current.PreProcessInput += OnPreProcessInput;
+                else
+                    InputManager.Current.PreProcessInput -= OnPreProcessInput;
+            }
         }
 
         private void OnPreProcessInput(object sender, PreProcessInputEventArgs e)
         {
-            if (!_isEnabled || _disposed)
-                return;
-
             // Only process keyboard events
             if (e.StagingItem.Input is not KeyEventArgs keyArgs)
                 return;
