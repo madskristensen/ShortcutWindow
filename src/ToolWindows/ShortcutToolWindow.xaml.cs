@@ -1,8 +1,9 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Timers;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Animation;
 using EnvDTE;
 using EnvDTE80;
 using static ShortcutWindow.OptionsProvider;
@@ -13,6 +14,72 @@ namespace ShortcutWindow
 {
     public partial class ShortcutToolWindow : UserControl, IDisposable
     {
+        // Static readonly dictionary to avoid recreating on every keystroke
+        private static readonly Dictionary<Key, string> CommonKeys = new Dictionary<Key, string>
+        {
+            { Key.Q, "Q" },
+            { Key.W, "W" },
+            { Key.E, "E" },
+            { Key.R, "R" },
+            { Key.T, "T" },
+            { Key.Y, "Y" },
+            { Key.U, "U" },
+            { Key.I, "I" },
+            { Key.O, "O" },
+            { Key.P, "P" },
+            { Key.A, "A" },
+            { Key.S, "S" },
+            { Key.D, "D" },
+            { Key.F, "F" },
+            { Key.G, "G" },
+            { Key.H, "H" },
+            { Key.J, "J" },
+            { Key.K, "K" },
+            { Key.L, "L" },
+            { Key.Z, "Z" },
+            { Key.X, "X" },
+            { Key.C, "C" },
+            { Key.V, "V" },
+            { Key.B, "B" },
+            { Key.N, "N" },
+            { Key.M, "M" },
+            { Key.D1, "1" },
+            { Key.D2, "2" },
+            { Key.D3, "3" },
+            { Key.D4, "4" },
+            { Key.D5, "5" },
+            { Key.D6, "6" },
+            { Key.D7, "7" },
+            { Key.D8, "8" },
+            { Key.D9, "9" },
+            { Key.D0, "0" },
+            { Key.OemComma, "," },
+            { Key.OemPeriod, "." },
+            { Key.OemQuestion, "/" },
+            { Key.OemSemicolon, ";" },
+            { Key.OemQuotes, "'" },
+            { Key.OemOpenBrackets, "[" },
+            { Key.OemCloseBrackets, "]" },
+            { Key.OemPipe, "\\" },
+            { Key.OemMinus, "-" },
+            { Key.OemPlus, "=" },
+            { Key.Space, "Space" },
+            { Key.Enter, "Enter" },
+            { Key.Escape, "Escape" },
+            { Key.Tab, "Tab" },
+            { Key.Back, "Backspace" },
+            { Key.Delete, "Delete" },
+            { Key.Insert, "Insert" },
+            { Key.Home, "Home" },
+            { Key.End, "End" },
+            { Key.PageUp, "PageUp" },
+            { Key.PageDown, "PageDown" },
+            { Key.Up, "Up" },
+            { Key.Down, "Down" },
+            { Key.Left, "Left" },
+            { Key.Right, "Right" }
+        };
+
         private readonly DTE2 _dte;
         private readonly General _settings;
         private readonly CommandBridge _service;
@@ -48,8 +115,16 @@ namespace ShortcutWindow
                 ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
+
+                    // Fade out animation
+                    PlayFadeOutAnimation();
+
                     lblShortcut.Content = "Ready";
                     lblCommand.Content = "Awaiting shortcut...";
+
+                    // Hide chord elements
+                    lblChordSeparator.Visibility = Visibility.Collapsed;
+                    lblShortcutChord.Visibility = Visibility.Collapsed;
                 }).FireAndForget();
             }
         }
@@ -91,6 +166,8 @@ namespace ShortcutWindow
         private void SetFontSize(General settings)
         {
             lblShortcut.FontSize = settings.FontSizeShortcut;
+            lblChordSeparator.FontSize = settings.FontSizeShortcut;
+            lblShortcutChord.FontSize = settings.FontSizeShortcut;
             lblCommand.FontSize = settings.FontSizeCommand;
         }
 
@@ -123,73 +200,8 @@ namespace ShortcutWindow
                 }
             }
 
-            // Common keys
-            var commonKeys = new Dictionary<Key, string>
-            {
-                { Key.Q, "Q" },
-                { Key.W, "W" },
-                { Key.E, "E" },
-                { Key.R, "R" },
-                { Key.T, "T" },
-                { Key.Y, "Y" },
-                { Key.U, "U" },
-                { Key.I, "I" },
-                { Key.O, "O" },
-                { Key.P, "P" },
-                { Key.A, "A" },
-                { Key.S, "S" },
-                { Key.D, "D" },
-                { Key.F, "F" },
-                { Key.G, "G" },
-                { Key.H, "H" },
-                { Key.J, "J" },
-                { Key.K, "K" },
-                { Key.L, "L" },
-                { Key.Z, "Z" },
-                { Key.X, "X" },
-                { Key.C, "C" },
-                { Key.V, "V" },
-                { Key.B, "B" },
-                { Key.N, "N" },
-                { Key.M, "M" },
-                { Key.D1, "1" },
-                { Key.D2, "2" },
-                { Key.D3, "3" },
-                { Key.D4, "4" },
-                { Key.D5, "5" },
-                { Key.D6, "6" },
-                { Key.D7, "7" },
-                { Key.D8, "8" },
-                { Key.D9, "9" },
-                { Key.D0, "0" },
-                { Key.OemComma, "," },
-                { Key.OemPeriod, "." },
-                { Key.OemQuestion, "/" },
-                { Key.OemSemicolon, ";" },
-                { Key.OemQuotes, "'" },
-                { Key.OemOpenBrackets, "[" },
-                { Key.OemCloseBrackets, "]" },
-                { Key.OemPipe, "\\" },
-                { Key.OemMinus, "-" },
-                { Key.OemPlus, "=" },
-                { Key.Space, "Space" },
-                { Key.Enter, "Enter" },
-                { Key.Escape, "Escape" },
-                { Key.Tab, "Tab" },
-                { Key.Back, "Backspace" },
-                { Key.Delete, "Delete" },
-                { Key.Insert, "Insert" },
-                { Key.Home, "Home" },
-                { Key.End, "End" },
-                { Key.PageUp, "PageUp" },
-                { Key.PageDown, "PageDown" },
-                { Key.Up, "Up" },
-                { Key.Down, "Down" },
-                { Key.Left, "Left" },
-                { Key.Right, "Right" }
-            };
-
-            foreach (var kvp in commonKeys)
+            // Check common keys using the static dictionary
+            foreach (var kvp in CommonKeys)
             {
                 if (Keyboard.IsKeyDown(kvp.Key))
                 {
@@ -241,10 +253,15 @@ namespace ShortcutWindow
 
                     if (!string.IsNullOrEmpty(shortcut) && !string.IsNullOrEmpty(cmd.Name))
                     {
-                        lblShortcut.Content = shortcut;
+                        // Display chord shortcuts with visual separation
+                        DisplayShortcut(shortcut);
+
                         lblCommand.Content = Commands.Prettify(cmd);
                         // Set tooltip text directly instead of creating new ToolTip object
                         lblCommand.ToolTip = cmd.LocalizedName;
+
+                        // Play fade in animation
+                        PlayFadeInAnimation();
                     }
 
                     _lastCommandTime = DateTime.Now;
@@ -276,6 +293,10 @@ namespace ShortcutWindow
                 btnPlayPause.Content = "▶️";
                 _events.BeforeExecute -= OnBeforeCommandExecuted;
                 _timer.Stop();
+
+                // Hide chord elements
+                lblChordSeparator.Visibility = Visibility.Collapsed;
+                lblShortcutChord.Visibility = Visibility.Collapsed;
             }
             else
             {
@@ -290,6 +311,51 @@ namespace ShortcutWindow
         private void Hyperlink_Click(object sender, RoutedEventArgs e)
         {
             VsShellUtilities.ShowToolsOptionsPage(typeof(GeneralOptions).GUID);
+        }
+
+        /// <summary>
+        /// Displays a shortcut, handling chord shortcuts (e.g., "Ctrl+K, Ctrl+C") with visual separation.
+        /// </summary>
+        private void DisplayShortcut(string shortcut)
+        {
+            // Check if this is a chord shortcut (contains ", " pattern)
+            if (shortcut.Contains(", "))
+            {
+                var parts = shortcut.Split(new[] { ", " }, 2, StringSplitOptions.None);
+                lblShortcut.Content = parts[0];
+                lblChordSeparator.Visibility = Visibility.Visible;
+                lblShortcutChord.Content = parts[1];
+                lblShortcutChord.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                // Single shortcut - hide chord elements
+                lblShortcut.Content = shortcut;
+                lblChordSeparator.Visibility = Visibility.Collapsed;
+                lblShortcutChord.Visibility = Visibility.Collapsed;
+            }
+        }
+
+        /// <summary>
+        /// Plays the fade-in animation on the shortcut panel.
+        /// </summary>
+        private void PlayFadeInAnimation()
+        {
+            if (TryFindResource("FadeInStoryboard") is Storyboard fadeIn)
+            {
+                fadeIn.Begin(pnlShortcut);
+            }
+        }
+
+        /// <summary>
+        /// Plays the fade-out animation on the shortcut panel.
+        /// </summary>
+        private void PlayFadeOutAnimation()
+        {
+            if (TryFindResource("FadeOutStoryboard") is Storyboard fadeOut)
+            {
+                fadeOut.Begin(pnlShortcut);
+            }
         }
 
         public void Dispose()
