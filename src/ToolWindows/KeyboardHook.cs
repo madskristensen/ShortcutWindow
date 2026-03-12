@@ -15,7 +15,7 @@ namespace ShortcutWindow
         private bool _isEnabled = true;
 
         /// <summary>
-        /// Fired when an interesting key combination is detected (modifier + key, or function key).
+        /// Fired when an interesting key combination is detected (modifier + key, function key, or Escape).
         /// The string contains the formatted shortcut (e.g., "Ctrl+Shift+K").
         /// </summary>
         public event EventHandler<ShortcutDetectedEventArgs> ShortcutDetected;
@@ -75,7 +75,7 @@ namespace ShortcutWindow
 
         /// <summary>
         /// Builds a formatted shortcut string from the currently pressed keys.
-        /// Returns null if the combination isn't interesting (no modifiers and not a function key).
+        /// Returns null if the combination isn't interesting (no modifiers and not a function key or Escape).
         /// </summary>
         private string BuildShortcutString(Key key)
         {
@@ -86,9 +86,10 @@ namespace ShortcutWindow
 
             bool hasAnyModifier = hasCtrl || hasAlt || hasShift || hasWin;
             bool isFunctionKey = IsFunctionKey(key);
+            bool isEscapeKey = key == Key.Escape;
 
-            // Filter: Must have modifier OR be a function key
-            if (!hasAnyModifier && !isFunctionKey)
+            // Filter: Must have modifier OR be a function key OR be Escape
+            if (!hasAnyModifier && !isFunctionKey && !isEscapeKey)
                 return null;
 
             // Use StringBuilder to avoid List<string> allocation
