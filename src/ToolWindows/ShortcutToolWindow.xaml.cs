@@ -262,6 +262,12 @@ namespace ShortcutWindow
             }
 
             Command cmd = _dte.Commands.Item(Guid, ID);
+            string shortcut = Commands.GetShortcut(cmd, pressedKeys);
+
+            if (string.IsNullOrEmpty(shortcut) || string.IsNullOrEmpty(cmd.Name))
+            {
+                return;
+            }
 
             // Use command key for reliable repeat detection (object reference may differ)
             string commandKey = $"{Guid}{ID}";
@@ -285,20 +291,16 @@ namespace ShortcutWindow
                 ThreadHelper.JoinableTaskFactory.StartOnIdle(async () =>
                 {
                     await ThreadHelper.JoinableTaskFactory.SwitchToMainThreadAsync();
-                    var shortcut = Commands.GetShortcut(cmd, pressedKeys);
 
-                    if (!string.IsNullOrEmpty(shortcut) && !string.IsNullOrEmpty(cmd.Name))
-                    {
-                        // Display chord shortcuts with visual separation
-                        DisplayShortcut(shortcut);
+                    // Display chord shortcuts with visual separation
+                    DisplayShortcut(shortcut);
 
-                        lblCommand.Content = Commands.Prettify(cmd);
-                        // Set tooltip text directly instead of creating new ToolTip object
-                        lblCommand.ToolTip = cmd.LocalizedName;
+                    lblCommand.Content = Commands.Prettify(cmd);
+                    // Set tooltip text directly instead of creating new ToolTip object
+                    lblCommand.ToolTip = cmd.LocalizedName;
 
-                        // Play fade in animation
-                        PlayFadeInAnimation();
-                    }
+                    // Play fade in animation
+                    PlayFadeInAnimation();
 
                     _lastCommandTime = DateTime.Now;
 
